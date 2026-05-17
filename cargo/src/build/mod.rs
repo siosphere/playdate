@@ -519,7 +519,8 @@ fn read_cargo_output<'cfg, 't>(config: &'cfg Config,
 	let mut reader = CargoJsonReader::new(cargo)?;
 	let mut build_finished_success = None;
 
-	let artifacts = {
+	// Collect artifacts eagerly so the reader borrow ends before status check.
+	let artifacts: Vec<Artifact> = {
 		let mut_ref = &mut build_finished_success;
 		reader.read()?.filter_map(|m| {
 			              // don't print BuildFinished(true) yet:
@@ -556,27 +557,13 @@ fn read_cargo_output<'cfg, 't>(config: &'cfg Config,
 			                 },
 			                 _ => None,
 			              }
-		              })
+		              }).collect()
 	};
 
+	// Check process exit status now that the reader borrow has ended.
+	reader.status().log_err_cargo(config).ok().and_then(|status| status.exit_ok().log_err_cargo(config).ok());
 
-	// Add completion to iterator with asking & logging process status.
-	// It's looks a little bit ugly with map to `Option` then `flat_map`, but
-	// after optimization there is no these perturbations.
-	// Also we don't need to fail entire process if one target fails and so status will not ok.
-	let artifacts = map_artifacts(tree, artifacts).map(Some)
-	                                              .chain([reader].into_iter()
-	                                                             .flat_map(|mut r| {
-		                                                             r.status()
-		                                                              .log_err_cargo(config)
-		                                                              .ok()
-		                                                              .and_then(|status| {
-			                                                              status.exit_ok().log_err_cargo(config).ok()
-		                                                              })
-	                                                             })
-	                                                             .map(|_| None))
-	                                              .flatten()
-	                                              .collect::<Vec<_>>();
+	let artifacts = map_artifacts(tree, artifacts.into_iter()).collect::<Vec<_>>();
 	let success = build_finished_success.filter(|v| *v)
 	                                    .ok_or_else(|| anyhow!("build not successful"));
 	if !config.compile_options.build_config.keep_going {

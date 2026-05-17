@@ -11,7 +11,7 @@ categories = [
 	"development-tools::cargo-plugins",
 	"development-tools::build-utils",
 ]
-edition.workspace = true
+edition = "2024"
 license.workspace = true
 authors.workspace = true
 homepage.workspace = true

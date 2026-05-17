@@ -76,7 +76,7 @@ pub fn build_all(config: &'_ Config,
 		            products[0].name,
 		            match &products[0].ck {
 			            CompileKind::Host => "host",
-		               CompileKind::Target(ref kind) => kind.short_name(),
+		               CompileKind::Target(kind) => kind.short_name(),
 		            }
 		);
 
@@ -108,9 +108,9 @@ pub fn build_all(config: &'_ Config,
 			                                   &products[0].src_ct,
 			                                   package_id,
 			                                   products[0].name,
-			                                   match products[0].ck {
+			                                   match &products[0].ck {
 				                                   CompileKind::Host => "host",
-			                                      CompileKind::Target(ref kind) => kind.short_name(),
+			                                      CompileKind::Target(kind) => kind.short_name(),
 			                                   }
 			)
 		                           })?;
